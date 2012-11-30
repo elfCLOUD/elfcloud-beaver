@@ -1,3 +1,19 @@
+/*
+ * Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ *	
+ *		Licensed under the Apache License, Version 2.0 (the "License");
+ *		you may not use this file except in compliance with the License.
+ *		You may obtain a copy of the License at
+ *	
+ *			http://www.apache.org/licenses/LICENSE-2.0
+ *	
+ *	   	Unless required by applicable law or agreed to in writing, software
+ *	   	distributed under the License is distributed on an "AS IS" BASIS,
+ *	   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	   	See the License for the specific language governing permissions and
+ *	   	limitations under the License.
+ */
+
 package fi.elfcloud.sci;
 
 import java.io.BufferedReader;
@@ -20,12 +36,12 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import fi.elfcloud.sci.exception.HolviClientException;
-import fi.elfcloud.sci.exception.HolviDataItemException;
-import fi.elfcloud.sci.exception.HolviException;
+import fi.elfcloud.sci.exception.ECClientException;
+import fi.elfcloud.sci.exception.ECDataItemException;
+import fi.elfcloud.sci.exception.ECException;
 
 /**
- * Provides methods for communicating to elfCLOUD.fi server.
+ * Provides methods for communicating to elfcloud.fi server.
  *
  */
 public class Connection {
@@ -37,11 +53,11 @@ public class Connection {
 	private HttpURLConnection conn;
 	private BufferedReader rd;
 	private JSONObject json;
-	private static HolviClient client;
+	private static Client client;
 	private int authTries = 0;
-	private static String url = "https://my.elfcloud.fi/api/";
+	private static String url = "https://api.elfcloud.fi/";
 	
-	public Connection(HolviClient client) {
+	public Connection(Client client) {
 		Connection.client = client;
 		Connection.manager = new CookieManager();
 		Connection.manager.setCookiePolicy(CookiePolicy.ACCEPT_ALL);
@@ -50,30 +66,31 @@ public class Connection {
 		Connection.cookies = cookieJar.getCookies();
 	}
 	
-	public Connection () throws HolviClientException {
+	public Connection () throws ECClientException {
 		if (client == null) {
-			HolviClientException exc = new HolviClientException();
+			ECClientException exc = new ECClientException();
 			exc.setMessage("Client not initialized");
 			throw exc;
 		}
 	}
 	
 	/**
-	 * Authenticates {@link HolviClient}
+	 * Authenticates {@link Client}
 	 * @return <code>true</code> on successful authentication, else <code>false</code>.
-	 * @throws HolviException
+	 * @throws ECException
 	 */
-	public boolean auth() throws HolviException {
+	public boolean auth() throws ECException {
+		authTries++;
 		if (cookieJar.getCookies().size() > 0) {
 			terminateSession();
 			cookieJar.removeAll();
 		}
+		
 		Map<String, Object> map = new HashMap<String, Object>();
 		map.put("username", client.getUsername());
 		map.put("auth_data", client.getPassword());
 		map.put("auth_method", client.getAuthMethod());
 		map.put("apikey", client.getApikey());
-		authTries++;
 		try {
 			JSONObject response = (JSONObject) sendRequest("auth", map);
 			JSONObject client = response.getJSONObject("client");
@@ -83,6 +100,8 @@ public class Connection {
 				allowedTypes[i] = types.getString(i);
 			}
 			Connection.client.setAllowedTypes(allowedTypes);
+			Connection.client.setCurrentUser(new User(response.getJSONObject("user")));
+			Connection.client.setAccountAdmin(new User(response.getJSONObject("account_admin")));
 			return true;
 		} catch (JSONException e) {
 			e.printStackTrace();
@@ -91,14 +110,14 @@ public class Connection {
 	}
 
 	/**
-	 * Sends JSON request to elfCLOUD.fi server.
+	 * Sends JSON request to elfcloud.fi server.
 	 * @param method request method.
 	 * @param params parameters for the method used.
 	 * @return result value(s) returned from server.
-	 * @throws HolviException
+	 * @throws ECException
 	 */
 	public Object sendRequest(String method, Map<String, Object> params) 
-			throws HolviException {
+			throws ECException {
 		String line="", result = "";
 		JSONObject response = null;
 		json = new JSONObject();
@@ -112,13 +131,15 @@ public class Connection {
 			conn.setDoOutput(true);
 			conn.getOutputStream().write(json.toString().getBytes("UTF8"));
 			rd = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-			
 			while ((line = rd.readLine()) != null) {
 				result += line;
 			}
 			rd.close();
 			response = new JSONObject(result);
 			if (response.has("error")) {
+				if (method.equalsIgnoreCase("term")) {
+					return "";
+				}
 				return handleException(response, method, params);
 			}
 			
@@ -126,31 +147,31 @@ public class Connection {
 			
 		} catch (JSONException e) {
 			e.printStackTrace();
-			HolviClientException exception = new HolviClientException();
+			ECClientException exception = new ECClientException();
 			exception.setId(408);
-			exception.setMessage("Error connecting to elfCLOUD.fi server");
+			exception.setMessage("Error connecting to elfcloud.fi server");
 			throw exception;
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
-			HolviClientException exception = new HolviClientException();
+			ECClientException exception = new ECClientException();
 			exception.setId(408);
-			exception.setMessage("Error connecting to elfCLOUD.fi server");
+			exception.setMessage("Error connecting to elfcloud.fi server");
 			throw exception;
 		}
 		return null;
 	}
 
 	/**
-	 * Does a fetch operation to elfCLOUD.fi server.
+	 * Does a fetch operation to elfcloud.fi server.
 	 * @param headers request headers to be applied
-	 * @return connection to elfCLOUD.fi server
-	 * @throws HolviException
+	 * @return connection to elfcloud.fi server
+	 * @throws ECException
 	 * @see {@link HttpURLConnection}
 	 */
 	public HttpURLConnection getData(Map<String, String> headers) 
-			throws HolviException {
+			throws ECException {
 		Object[] keys = headers.keySet().toArray();
 		URL url;
 		try {
@@ -162,7 +183,7 @@ public class Connection {
 				conn.setRequestProperty((String) keys[i], headers.get(keys[i]));
 			}
 			
-			String result = conn.getHeaderField("X-HOLVI-RESULT");
+			String result = conn.getHeaderField("X-ELFCLOUD-RESULT");
 			if (!result.equals("OK")) {
 				String[] exceptionData = result.split(" ", 4);
 				int exceptionID = Integer.parseInt(exceptionData[1]);
@@ -175,7 +196,7 @@ public class Connection {
 					}
 					authTries = 0;
 				}
-				HolviDataItemException exception = new HolviDataItemException();
+				ECDataItemException exception = new ECDataItemException();
 				exception.setId(exceptionID);
 				exception.setMessage(message);
 				throw exception;
@@ -186,23 +207,23 @@ public class Connection {
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
-			HolviClientException exception = new HolviClientException();
+			ECClientException exception = new ECClientException();
 			exception.setId(408);
-			exception.setMessage("Error connecting to elfCLOUD.fi server");
+			exception.setMessage("Error connecting to elfcloud.fi server");
 			throw exception;
 		}
 		return null;
 	}
 
 	/**
-	 * Does a store operation to elfCLOUD.fi server.
+	 * Does a store operation to elfcloud.fi server.
 	 * @param headers request headers to be applied
 	 * @param dataChunk data to be sent
 	 * @param len length of the data
-	 * @throws HolviException
+	 * @throws ECException
 	 */
 	public void sendData(Map<String, String> headers, byte[] dataChunk, int len) 
-			throws HolviException {
+			throws ECException {
 		Object[] keys = headers.keySet().toArray();
 		URL url;
 		
@@ -216,16 +237,16 @@ public class Connection {
 			DataOutputStream wr = new DataOutputStream (
 					conn.getOutputStream ());
 			wr.write(dataChunk, 0, len);
-			String result = conn.getHeaderField("X-HOLVI-RESULT");
-			
+			String result = conn.getHeaderField("X-ELFCLOUD-RESULT");
 			wr.close();
 			if (conn.getResponseCode() != 200 || !result.equals("OK")) {
-				HolviDataItemException exception;
+				ECDataItemException exception;
 				if (conn.getResponseCode() == 200) {
 					String[] exceptionData = result.split(" ", 4);
 					int exceptionID = Integer.parseInt(exceptionData[1]);
 					String message = exceptionData[3];
 					if (exceptionID == 101) {
+						cookieJar.removeAll();
 						while (authTries < 3) {
 							if (auth()) {
 								sendData(headers, dataChunk, len);
@@ -234,11 +255,11 @@ public class Connection {
 						}
 						authTries = 0;
 					}
-					exception = new HolviDataItemException();
+					exception = new ECDataItemException();
 					exception.setId(exceptionID);
 					exception.setMessage(message);
 				} else {
-					exception = new HolviDataItemException();
+					exception = new ECDataItemException();
 					exception.setId(conn.getResponseCode());
 					exception.setMessage(conn.getResponseMessage());
 				}
@@ -247,9 +268,9 @@ public class Connection {
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
-			HolviClientException exception = new HolviClientException();
+			ECClientException exception = new ECClientException();
 			exception.setId(408);
-			exception.setMessage("Error connecting to elfCLOUD.fi server");
+			exception.setMessage("Error connecting to elfcloud.fi server");
 			authTries = 0;
 			throw exception;
 		}
@@ -257,23 +278,24 @@ public class Connection {
 	}
 	
 	/**
-	 * Parses the elfCLOUD.fi server exception response and wraps it in {@link HolviException}.<p>
+	 * Parses the elfcloud.fi server exception response and wraps it in {@link ECException}.<p>
 	 * Tries re-authing in case of authentication failure.
 	 * @param response server response to be parsed
 	 * @param method original request method
 	 * @param params original request parameters
 	 * @return in case of authentication failure, tries re-authing and returns the response of original call.
-	 * @throws HolviException
+	 * @throws ECException
 	 * @throws JSONException
 	 */
 	public Object handleException(JSONObject response, String method, Map<String, Object> params) 
-			throws HolviException, JSONException {
+			throws ECException, JSONException {
 		JSONObject exception = response.getJSONObject("error");
 		String type = exception.getString("data");
 		String message = exception.getString("message");
 		int id = exception.getInt("code");
 		
 		if (id == 101) {
+			cookieJar.removeAll();
 			while (authTries < 3) {
 				auth();
 				Object excResponse = sendRequest(method, params);
@@ -282,7 +304,7 @@ public class Connection {
 			}
 		}
 		
-		HolviException exc = new HolviException();
+		ECException exc = new ECException();
 		exc.setId(id);
 		exc.setMessage(message);
 		exc.setType(type);
@@ -297,7 +319,8 @@ public class Connection {
 		Map<String, Object> map = new HashMap<String, Object>();
 		try {
 			sendRequest("term", map);
-		} catch (HolviException e) {
+			cookieJar.removeAll();
+		} catch (ECException e) {
 			e.printStackTrace();
 		}
 	}

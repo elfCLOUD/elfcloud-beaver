@@ -1,3 +1,19 @@
+/*
+ * Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ *	
+ *		Licensed under the Apache License, Version 2.0 (the "License");
+ *		you may not use this file except in compliance with the License.
+ *		You may obtain a copy of the License at
+ *	
+ *			http://www.apache.org/licenses/LICENSE-2.0
+ *	
+ *	   	Unless required by applicable law or agreed to in writing, software
+ *	   	distributed under the License is distributed on an "AS IS" BASIS,
+ *	   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	   	See the License for the specific language governing permissions and
+ *	   	limitations under the License.
+ */
+
 package fi.elfcloud.sci;
 
 import java.io.IOException;
@@ -14,24 +30,24 @@ import java.util.Map;
 
 import javax.crypto.Cipher;
 
+
 import org.apache.commons.codec.binary.Base64;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-
-import fi.elfcloud.sci.HolviClient.ENC;
+import fi.elfcloud.sci.Client.ENC;
 import fi.elfcloud.sci.encryption.DataStream;
-import fi.elfcloud.sci.exception.HolviClientException;
-import fi.elfcloud.sci.exception.HolviDataItemException;
-import fi.elfcloud.sci.exception.HolviEncryptionException;
-import fi.elfcloud.sci.exception.HolviException;
+import fi.elfcloud.sci.exception.ECClientException;
+import fi.elfcloud.sci.exception.ECDataItemException;
+import fi.elfcloud.sci.exception.ECEncryptionException;
+import fi.elfcloud.sci.exception.ECException;
 
 /**
- * Provides methods for handling data on elfCLOUD.fi server
+ * Provides methods for handling data on elfcloud.fi server
  *
  */
 public class DataItem {
-	private HolviClient client;
+	private Client client;
 	private int parentId;
 	private String name;
 	private long keyLength;
@@ -40,11 +56,11 @@ public class DataItem {
 	private String hash;
 	private String meta = "";
 
-	public DataItem(HolviClient client) {
+	public DataItem(Client client) {
 
 	}
 
-	public DataItem(HolviClient client, JSONObject object, int parentId) throws JSONException {
+	public DataItem(Client client, JSONObject object, int parentId) throws JSONException {
 		this.client = client;
 		this.name = object.getString("name");
 		this.meta = object.getString("meta");
@@ -65,7 +81,7 @@ public class DataItem {
 		this.setKeyLength(object.getLong("size"));
 	}
 
-	public DataItem(HolviClient client, String name, int parentId) {
+	public DataItem(Client client, String name, int parentId) {
 		this.client = client;
 		this.name = name;
 		this.parentId = parentId;
@@ -98,19 +114,19 @@ public class DataItem {
 	 * @throws IOException
 	 * @throws InvalidKeyException
 	 * @throws InvalidAlgorithmParameterException
-	 * @throws HolviException
-	 * @throws HolviEncryptionException
+	 * @throws ECException
+	 * @throws ECEncryptionException
 	 */
-	public void storeData(String method, InputStream is) throws IOException, InvalidKeyException, InvalidAlgorithmParameterException, HolviException, HolviEncryptionException {
+	public void storeData(String method, InputStream is) throws IOException, InvalidKeyException, InvalidAlgorithmParameterException, ECException, ECEncryptionException {
 		Map<String, String> headers = new HashMap<String, String>();
 		String meta = "";
 		synchronized (this) {
 			meta = this.client.createMeta(this.meta);
 		}
-		headers.put("X-HOLVI-STORE-MODE", method);
-		headers.put("X-HOLVI-KEY", Base64.encodeBase64String(this.name.getBytes("UTF-8")));
-		headers.put("X-HOLVI-PARENT", Integer.toString(this.parentId));
-		headers.put("X-HOLVI-META", meta);
+		headers.put("X-ELFCLOUD-STORE-MODE", method);
+		headers.put("X-ELFCLOUD-KEY", Base64.encodeBase64String(this.name.getBytes("UTF-8")));
+		headers.put("X-ELFCLOUD-PARENT", Integer.toString(this.parentId));
+		headers.put("X-ELFCLOUD-META", meta);
 		headers.put("Content-Type", "application/octet-stream");
 		MessageDigest ciphermd = null;
 		MessageDigest plainmd = null;
@@ -122,7 +138,7 @@ public class DataItem {
 
 		DigestInputStream digestStream = new DigestInputStream(is, plainmd);
 		InputStream dataStream;
-		if (client.getEncryptionMode() != HolviClient.ENC.NONE) {
+		if (client.getEncryptionMode() != Client.ENC.NONE) {
 			dataStream = new DataStream(Cipher.ENCRYPT_MODE, digestStream, null).getStream();
 		} else {
 			dataStream = new DataStream(0, digestStream, null).getStream();
@@ -143,9 +159,9 @@ public class DataItem {
 			}
 			ciphermd.update(buff, 0, inbuff);
 			headers.put("Content-Length", Integer.toString(inbuff));
-			headers.put("X-HOLVI-HASH", Utils.getHex(ciphermd.digest()));
+			headers.put("X-ELFCLOUD-HASH", Utils.getHex(ciphermd.digest()));
 			this.client.getConnection().sendData(headers, buff, inbuff);
-			headers.put("X-HOLVI-STORE-MODE", "append");
+			headers.put("X-ELFCLOUD-STORE-MODE", "append");
 		}
 		this.meta = meta;
 		HashMap<String, String> metamap = Utils.metaToMap(this.meta);
@@ -157,29 +173,29 @@ public class DataItem {
 	 * Retrieves data from {@link DataItem}.
 	 * @return {@link InputStream} of the server connection.
 	 * @throws InvalidKeyException
-	 * @throws HolviException
-	 * @throws HolviEncryptionException
+	 * @throws ECException
+	 * @throws ECEncryptionException
 	 * @see {@link InputStream}
 	 */
 	public InputStream getData() 
-			throws InvalidKeyException, HolviException, HolviEncryptionException {
+			throws InvalidKeyException, ECException, ECEncryptionException {
 		Map<String, String> headers = new HashMap<String, String>();
 		try {
-			headers.put("X-HOLVI-KEY", Base64.encodeBase64String(this.name.getBytes("UTF-8")));
+			headers.put("X-ELFCLOUD-KEY", Base64.encodeBase64String(this.name.getBytes("UTF-8")));
 		} catch (UnsupportedEncodingException e1) {
 			e1.printStackTrace();
 		}
-		headers.put("X-HOLVI-PARENT", Integer.toString(this.parentId));
+		headers.put("X-ELFCLOUD-PARENT", Integer.toString(this.parentId));
 
 		HttpURLConnection conn = null;
 		HashMap<String, String> metaMap;
 		try {
 			conn = this.client.getConnection().getData(headers);
-		} catch (HolviException e) {
+		} catch (ECException e) {
 			e.printStackTrace();
 		} 
-		this.setHash(conn.getHeaderField("X-HOLVI-HASH"));
-		this.meta = conn.getHeaderField("X-HOLVI-META");
+		this.setHash(conn.getHeaderField("X-ELFCLOUD-HASH"));
+		this.meta = conn.getHeaderField("X-ELFCLOUD-META");
 		metaMap = Utils.metaToMap(this.meta);
 		this.setKeyLength(Long.parseLong(conn.getHeaderField("Content-Length")));
 		DataStream dataStream;
@@ -187,7 +203,7 @@ public class DataItem {
 		try {
 			is = conn.getInputStream();
 		} catch (IOException e) {
-			HolviDataItemException exc = new HolviDataItemException();
+			ECDataItemException exc = new ECDataItemException();
 			exc.setMessage("Error with server connection");
 			throw exc;
 		}
@@ -206,11 +222,11 @@ public class DataItem {
 
 	/**
 	 * Performs remove operation on {@link DataItem}.
-	 * @throws HolviException
+	 * @throws ECException
 	 * @throws JSONException
 	 * @throws IOException
 	 */
-	public void remove() throws HolviException, JSONException, IOException {
+	public void remove() throws ECException, JSONException, IOException {
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put("parent_id", Integer.toString(this.parentId));
 		params.put("name", this.name);
@@ -220,10 +236,10 @@ public class DataItem {
 	/**
 	 * Updates meta header of {@link DataItem}.
 	 * @param newMetaValues
-	 * @throws HolviException
+	 * @throws ECException
 	 * @throws IOException
 	 */
-	public synchronized void updateMeta(HashMap<String, String> newMetaValues) throws HolviException, IOException {
+	public synchronized void updateMeta(HashMap<String, String> newMetaValues) throws ECException, IOException {
 		Map<String, Object> params = new HashMap<String, Object>();
 		HashMap<String, String> existingMeta = Utils.metaToMap(this.meta);
 
@@ -242,11 +258,11 @@ public class DataItem {
 	/**
 	 * Renames {@link DataItem}
 	 * @param newName new name for the data item
-	 * @throws HolviException
+	 * @throws ECException
 	 * @throws JSONException
 	 * @throws IOException
 	 */
-	public void rename(String newName) throws HolviException, JSONException, IOException {
+	public void rename(String newName) throws ECException, JSONException, IOException {
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put("parent_id", this.parentId);
 		params.put("name", this.name);
@@ -260,10 +276,10 @@ public class DataItem {
 	 * Relocates {@link DataItem} to new cluster.
 	 * @param newParentId id of the destination cluster
 	 * @param newName name for the {@link DataItem} in the new cluster
-	 * @throws HolviClientException
-	 * @throws HolviException
+	 * @throws ECClientException
+	 * @throws ECException
 	 */
-	public void relocate(int newParentId, String newName) throws HolviClientException, HolviException {
+	public void relocate(int newParentId, String newName) throws ECClientException, ECException {
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put("parent_id", this.parentId);
 		params.put("name", this.name);

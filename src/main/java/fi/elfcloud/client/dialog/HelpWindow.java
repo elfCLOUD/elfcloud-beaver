@@ -1,3 +1,19 @@
+/*
+ * Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ *	
+ *		Licensed under the Apache License, Version 2.0 (the "License");
+ *		you may not use this file except in compliance with the License.
+ *		You may obtain a copy of the License at
+ *	
+ *			http://www.apache.org/licenses/LICENSE-2.0
+ *	
+ *	   	Unless required by applicable law or agreed to in writing, software
+ *	   	distributed under the License is distributed on an "AS IS" BASIS,
+ *	   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	   	See the License for the specific language governing permissions and
+ *	   	limitations under the License.
+ */
+
 package fi.elfcloud.client.dialog;
 
 import java.awt.BorderLayout;
@@ -10,6 +26,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -37,11 +54,9 @@ import javax.swing.event.ListSelectionListener;
 import javax.swing.text.html.HTMLEditorKit;
 import javax.swing.text.html.StyleSheet;
 
-
-
 import fi.elfcloud.client.BeaverGUI;
-import fi.elfcloud.client.HolviKeyManager;
-import fi.elfcloud.client.HolviXMLKeyItem;
+import fi.elfcloud.client.Messages;
+import fi.elfcloud.client.XMLKeyItem;
 import fi.elfcloud.sci.Utils;
 
 class Topic  {
@@ -55,22 +70,25 @@ class Topic  {
 }
 
 public class HelpWindow extends JFrame implements WindowListener {
+	private static HelpWindow helpWindow;
 	private static final long serialVersionUID = 559978795029545851L;
+	private static final String title = Messages.getString("HelpWindow.window_title"); //$NON-NLS-1$
 	private ArrayList<Topic> topics = new ArrayList<Topic>();
 	private JEditorPane topicContent;
 	private Preferences prefs;
 	private JCheckBox showAgain;
 	private JPanel buttonPane;
 	
-	public HelpWindow() {
-		setTitle("elfCLOUD.fi\u2122 Beaver - Help");
+	private HelpWindow() {
+		setTitle(BeaverGUI.titlePrefix + title);
 		setIconImage(new ImageIcon(BeaverGUI.iconUrl).getImage());
 		prefs = BeaverGUI.getPreferences();
-		topics.add(new Topic("Welcome", "welcome.html"));
-		topics.add(new Topic("Encrypting data", "encryption.html"));
-		topics.add(new Topic("Managing folders", "folders.html"));
-		topics.add(new Topic("Uploading files", "upload.html"));
-		topics.add(new Topic("Downloading files", "download.html"));
+		topics.add(new Topic(Messages.getString("HelpWindow.topic_welcome"), Messages.getString("HelpWindow.content_welcome"))); //$NON-NLS-1$ //$NON-NLS-2$
+		topics.add(new Topic(Messages.getString("HelpWindow.topic_encryption"), Messages.getString("HelpWindow.content_encryption"))); //$NON-NLS-1$ //$NON-NLS-2$
+		topics.add(new Topic(Messages.getString("HelpWindow.topic_folders"), Messages.getString("HelpWindow.content_folders"))); //$NON-NLS-1$ //$NON-NLS-2$
+		topics.add(new Topic(Messages.getString("HelpWindow.topic_uploading"), Messages.getString("HelpWindow.content_uploading"))); //$NON-NLS-1$ //$NON-NLS-2$
+		topics.add(new Topic(Messages.getString("HelpWindow.topic_downloading"), Messages.getString("HelpWindow.content_downloading"))); //$NON-NLS-1$ //$NON-NLS-2$
+		topics.add(new Topic(Messages.getString("HelpWindow.topic_license"), Messages.getString("HelpWindow.content_license")));  //$NON-NLS-1$ //$NON-NLS-2$
 		setLayout(new BorderLayout());
 		addHelpPanel();
 		addButtonPanel();
@@ -78,21 +96,26 @@ public class HelpWindow extends JFrame implements WindowListener {
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 		addWindowListener(this);
 		pack();
-		setVisible(true);
 
 	}
-
+	public static HelpWindow getInstance() {
+		if (helpWindow == null) {
+			helpWindow = new HelpWindow();
+		}
+		helpWindow.setVisible(true);
+		return helpWindow;
+	}
 	private void addHelpPanel() {
 		JPanel contentPanel = new JPanel();
 		SpringLayout layout = new SpringLayout();
 		contentPanel.setLayout(layout);
-		DefaultListModel<String> listModel = new DefaultListModel<String>();
+		DefaultListModel listModel = new DefaultListModel();
 
 		for (Topic t: topics) {
 			listModel.addElement(t.title);
 		}
 
-		JList<String> topicList = new JList<String>(listModel);
+		JList topicList = new JList(listModel);
 		topicList.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 		topicList.getSelectionModel().addListSelectionListener(new SelectionListener());
 		topicList.setLayoutOrientation(JList.VERTICAL);
@@ -105,13 +128,13 @@ public class HelpWindow extends JFrame implements WindowListener {
 		HTMLEditorKit kit = new HTMLEditorKit();
 		this.topicContent.setEditorKit(kit);
 		StyleSheet styles = kit.getStyleSheet();
-		styles.addRule("body {margin-left: 10px; margin-bottom: 50px;}");
-		styles.addRule("p {margin-top: 5px;");
-		styles.addRule("li {list-style-type: none;}");
-		styles.addRule("img {border: 2px;");
-		styles.addRule("h3 {margin-top: 10px; margin-bottom: 10px;");
+		styles.addRule("body {margin-left: 10px; margin-bottom: 50px;}"); //$NON-NLS-1$
+		styles.addRule("p {margin-top: 5px;"); //$NON-NLS-1$
+		styles.addRule("li {list-style-type: none;}"); //$NON-NLS-1$
+		styles.addRule("img {border: 2px;"); //$NON-NLS-1$
+		styles.addRule("h3 {margin-top: 10px; margin-bottom: 10px;"); //$NON-NLS-1$
 		try {
-			this.topicContent.setPage(BeaverGUI.class.getResource("welcome.html"));
+			this.topicContent.setPage(BeaverGUI.class.getResource(Messages.getString("HelpWindow.content_default"))); //$NON-NLS-1$
 			this.topicContent.addHyperlinkListener(new HyperlinkListener() {
 
 				@Override
@@ -121,7 +144,7 @@ public class HelpWindow extends JFrame implements WindowListener {
 					{ 
 						Desktop desktop = Desktop.getDesktop();
 						try {
-							if (event.getURL().toString().startsWith("https:") || event.getURL().toString().startsWith("http:") ) {
+							if (event.getURL().toString().startsWith("https:") || event.getURL().toString().startsWith("http:") ) { //$NON-NLS-1$ //$NON-NLS-2$
 								desktop.browse(event.getURL().toURI());
 							} else {
 								topicContent.setPage(event.getURL());
@@ -153,17 +176,17 @@ public class HelpWindow extends JFrame implements WindowListener {
 	}
 
 	public void addCheckbox() {
-		showAgain = new JCheckBox("Don't show this again");
-		if (prefs.getBoolean("elfcloud.show.tutorial", true)) {
+		showAgain = new JCheckBox(Messages.getString("HelpWindow.checkbox_show_again")); //$NON-NLS-1$
+		if (prefs.getBoolean("elfcloud.show.tutorial", true)) { //$NON-NLS-1$
 			showAgain.setSelected(false);
 		}
 		showAgain.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
 				if (showAgain.isSelected()) {
-					prefs.putBoolean("elfcloud.show.tutorial", false);
+					prefs.putBoolean("elfcloud.show.tutorial", false); //$NON-NLS-1$
 				} else {
-					prefs.putBoolean("elfcloud.show.tutorial", true);
+					prefs.putBoolean("elfcloud.show.tutorial", true); //$NON-NLS-1$
 				}
 			}
 		});
@@ -173,7 +196,7 @@ public class HelpWindow extends JFrame implements WindowListener {
 	private void addButtonPanel() {
 		this.buttonPane = new JPanel();
 
-		JButton close = new JButton("Close");
+		JButton close = new JButton(Messages.getString("HelpWindow.button_close")); //$NON-NLS-1$
 		close.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
@@ -183,7 +206,7 @@ public class HelpWindow extends JFrame implements WindowListener {
 		buttonPane.setLayout(new BoxLayout(buttonPane, BoxLayout.LINE_AXIS));
 		buttonPane.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
 		buttonPane.add(Box.createHorizontalGlue());
-		if (prefs.getBoolean("elfcloud.show.tutorial", true)) {
+		if (prefs.getBoolean("elfcloud.show.tutorial", true)) { //$NON-NLS-1$
 			addCheckbox();
 		}
 		buttonPane.add(Box.createRigidArea(new Dimension(10, 0)));
@@ -221,26 +244,32 @@ public class HelpWindow extends JFrame implements WindowListener {
 	@Override
 	public void windowClosed(WindowEvent arg0) {
 		if (BeaverGUI.getKeyList().size() == 0) {
-			String defaultKeyDir = prefs.get("elfcloud.keydir", System.getProperty("user.home") + System.getProperty("file.separator") + "elfcloud");
+			String defaultKeyDir = BeaverGUI.getKeyDirectoryPath();
 			File file = null;
 			int i = 0;
 			while (true) {
-				file = new File(defaultKeyDir, "elfcloudkey" + i + ".key");
+				file = new File(defaultKeyDir, "elfcloudkey" + i + ".key"); //$NON-NLS-1$ //$NON-NLS-2$
 				if (!file.exists()) {
 					break;
 				}
 				i++;
 			}
 
-			HolviXMLKeyItem xmlKey;
+			XMLKeyItem xmlKey;
 			int maxKeyLength = Utils.getMaximumAvailableKeyLength();
-			xmlKey = HolviKeyManager.generateKey(file.getAbsolutePath(), "Unique generated encryption key", maxKeyLength);
-			prefs.put("selected.key", xmlKey.getKeyHash());
-			JPanel panel = new JPanel();
-			panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-			panel.add(new Label("Your key manager did not contain any keys. A new key was generated automatically."));
-			panel.add(new Label("The generated key is located in " + xmlKey.getPath()));
-			JOptionPane.showMessageDialog(HelpWindow.this, panel, "A new encryption key was generated", JOptionPane.INFORMATION_MESSAGE);
+			try {
+				xmlKey = KeyAdditionDialog.generateKey(file, Messages.getString("HelpWindow.description_generated_key"), maxKeyLength); //$NON-NLS-1$
+				prefs.put("selected.key", xmlKey.getKeyHash()); //$NON-NLS-1$
+				JPanel panel = new JPanel();
+				panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+				panel.add(new Label(Messages.getString("HelpWindow.key_generated_message"))); //$NON-NLS-1$
+				panel.add(new Label(Messages.getString("HelpWindow.key_generated_message_2") + xmlKey.getPath())); //$NON-NLS-1$
+				JOptionPane.showMessageDialog(HelpWindow.this, panel, Messages.getString("HelpWindow.key_generated_title"), JOptionPane.INFORMATION_MESSAGE); //$NON-NLS-1$
+			} catch (FileNotFoundException e) {
+				e.printStackTrace();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} 
 		}
 	}
 

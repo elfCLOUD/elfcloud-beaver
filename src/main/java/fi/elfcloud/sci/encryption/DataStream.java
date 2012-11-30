@@ -1,3 +1,19 @@
+/*
+ * Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ *	
+ *		Licensed under the Apache License, Version 2.0 (the "License");
+ *		you may not use this file except in compliance with the License.
+ *		You may obtain a copy of the License at
+ *	
+ *			http://www.apache.org/licenses/LICENSE-2.0
+ *	
+ *	   	Unless required by applicable law or agreed to in writing, software
+ *	   	distributed under the License is distributed on an "AS IS" BASIS,
+ *	   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	   	See the License for the specific language governing permissions and
+ *	   	limitations under the License.
+ */
+
 package fi.elfcloud.sci.encryption;
 
 import java.io.IOException;
@@ -14,12 +30,10 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-
-
 import fi.elfcloud.sci.DataItem;
 import fi.elfcloud.sci.Utils;
-import fi.elfcloud.sci.exception.HolviEncryptionException;
-import fi.elfcloud.sci.exception.HolviException;
+import fi.elfcloud.sci.exception.ECEncryptionException;
+import fi.elfcloud.sci.exception.ECException;
 
 /**
  * Wrapper for {@link InputStream}.
@@ -27,7 +41,7 @@ import fi.elfcloud.sci.exception.HolviException;
  * @see DataItem
  */
 public class DataStream {
-	private static ArrayList<HolviKeyItem> keyList = new ArrayList<HolviKeyItem>();
+	private static ArrayList<ECKeyItem> keyList = new ArrayList<ECKeyItem>();
 	/**
 	 * Initialization vector used for new {@link CipherInputStream} when encrypting data.
 	 */
@@ -53,11 +67,11 @@ public class DataStream {
 	 * @param is {@link InputStream} to be wrapped in {@link CipherInputStream}
 	 * @param keyHash hash of the key to be used in decryption. Encryption uses {@link #iv} and {@link #key}
 	 * @throws InvalidKeyException
-	 * @throws HolviException
-	 * @throws HolviEncryptionException
+	 * @throws ECException
+	 * @throws ECEncryptionException
 	 */
 	public DataStream(int mode, InputStream is, String keyHash) 
-			throws InvalidKeyException, HolviException, HolviEncryptionException {
+			throws InvalidKeyException, ECException, ECEncryptionException {
 
 		switch (mode) {
 		case Cipher.DECRYPT_MODE:
@@ -65,7 +79,7 @@ public class DataStream {
 				this.ips = new IvParameterSpec(DataStream.iv);
 				this.skey = new SecretKeySpec(DataStream.key, "AES");
 			} else {
-				HolviKeyItem keyItem = selectEncryptionKey(keyHash);
+				ECKeyItem keyItem = selectEncryptionKey(keyHash);
 				if (keyItem != null) {
 					this.ips = new IvParameterSpec(keyItem.getIV());
 					this.skey = new SecretKeySpec(keyItem.getKey(), "AES");
@@ -77,7 +91,7 @@ public class DataStream {
 
 						}
 					}
-					throw new HolviEncryptionException(0, "No decryption key available");
+					throw new ECEncryptionException(0, "No decryption key available");
 				}
 			}
 			try {
@@ -122,7 +136,7 @@ public class DataStream {
 				} catch (IOException e1) {
 					e1.printStackTrace();
 				}
-				HolviEncryptionException exc = new HolviEncryptionException(0, "Invalid cipher");
+				ECEncryptionException exc = new ECEncryptionException(0, "Invalid cipher");
 				throw exc;
 			}
 			this.ips = new IvParameterSpec(DataStream.iv);
@@ -207,26 +221,26 @@ public class DataStream {
 	 * Add new key to available keys
 	 * @param iv initialization vector for the encryption key
 	 * @param key encryption key
-	 * @throws HolviEncryptionException
+	 * @throws ECEncryptionException
 	 */
 	public static void addEncryptionKey(byte[] iv, byte[] key) 
-			throws HolviEncryptionException {
-		String keyHash = Utils.calculateKeyHash(iv,  key);
+			throws ECEncryptionException {
+		String keyHash = Utils.calculateKeyHash(iv, key);
 		if (selectEncryptionKey(keyHash) != null) {
-			throw new HolviEncryptionException(1, "Key already exists");
+			throw new ECEncryptionException(1, "Key already exists");
 		}
 
-		HolviKeyItem encryptionKey = new HolviKeyItem(iv, key, keyHash);
+		ECKeyItem encryptionKey = new ECKeyItem(iv, key, keyHash);
 		keyList.add(encryptionKey);
 	}
 
 	/**
-	 * Returns {@link HolviKeyItem} for the given <code>keyHash</code>
+	 * Returns {@link ECKeyItem} for the given <code>keyHash</code>
 	 * @param keyHash hash of the wanted key
-	 * @return {@link HolviKeyItem} with given <code>keyHash</code>, if none found returns <code>null</code>
+	 * @return {@link ECKeyItem} with given <code>keyHash</code>, if none found returns <code>null</code>
 	 */
-	private static HolviKeyItem selectEncryptionKey(String keyHash) {
-		for (HolviKeyItem keyItem : keyList) {
+	private static ECKeyItem selectEncryptionKey(String keyHash) {
+		for (ECKeyItem keyItem : keyList) {
 			if (keyItem.getKeyHash().equals(keyHash)) {
 				return keyItem;
 			}
@@ -235,22 +249,22 @@ public class DataStream {
 	}
 
 	/**
-	 * Wraps thrown exceptions in {@link HolviEncryptionException}
+	 * Wraps thrown exceptions in {@link ECEncryptionException}
 	 * @param exc
-	 * @throws HolviEncryptionException
+	 * @throws ECEncryptionException
 	 */
-	private void handleException(Exception exc) throws HolviEncryptionException {
-		HolviEncryptionException encryptionException = new HolviEncryptionException();
+	private void handleException(Exception exc) throws ECEncryptionException {
+		ECEncryptionException encryptionException = new ECEncryptionException();
 		encryptionException.setMessage(exc.getMessage());
 		throw encryptionException;
 	}
 
 	/**
 	 * Removes encryption key from available keys
-	 * @param keyHash hash of the {@link HolviKeyItem} to be removed
+	 * @param keyHash hash of the {@link ECKeyItem} to be removed
 	 */
 	public static void removeEncryptionKey(String keyHash) {
-		HolviKeyItem keyItem = selectEncryptionKey(keyHash);
+		ECKeyItem keyItem = selectEncryptionKey(keyHash);
 		if (keyItem != null) {
 			keyList.remove(keyItem);
 		}

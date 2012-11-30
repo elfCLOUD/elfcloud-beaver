@@ -1,0 +1,24 @@
+elfcloud.fi Beaver
+   Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ 
+   This product includes software developed at
+   elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services.
+ 
+ 
+   Base64 encoding / decoding support is provided by Apache Commons Codec (license: The Apache Software License, Version 2.0).
+      http://commons.apache.org/codec/
+	  
+   HTML escaping support is provided by Apache Commons Lang (license: The Apache Software License, Version 2.0).
+      http://commons.apache.org/lang/
+	  
+   Apple look and feel support provided by Apple Inc.
+   
+   JSON support is provided by JSON.org (license: http://www.json.org/license.html).
+      http://www.json.org
+	  
+   SpringUtilities is provided by Oracle.
+      http://docs.oracle.com/javase/tutorial/uiswing/examples/layout/SpringGridProject/src/layout/SpringUtilities.java
+	  
+   WrapLayout component is provided by SwingX project (license: LGPL-2.1).
+      http://java.net/projects/swingx
+	  

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ *	
+ *		Licensed under the Apache License, Version 2.0 (the "License");
+ *		you may not use this file except in compliance with the License.
+ *		You may obtain a copy of the License at
+ *	
+ *			http://www.apache.org/licenses/LICENSE-2.0
+ *	
+ *	   	Unless required by applicable law or agreed to in writing, software
+ *	   	distributed under the License is distributed on an "AS IS" BASIS,
+ *	   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	   	See the License for the specific language governing permissions and
+ *	   	limitations under the License.
+ */
+
 package fi.elfcloud.client.tree;
 
 import java.io.File;
@@ -14,15 +30,15 @@ import javax.swing.tree.TreePath;
 
 import org.json.JSONException;
 
-
 import fi.elfcloud.client.BeaverGUI;
+import fi.elfcloud.client.Messages;
 import fi.elfcloud.client.dialog.DownloadDialog;
 import fi.elfcloud.client.dialog.UploadDialog;
 import fi.elfcloud.sci.DataItem;
 import fi.elfcloud.sci.container.Cluster;
 import fi.elfcloud.sci.container.Vault;
-import fi.elfcloud.sci.exception.HolviClientException;
-import fi.elfcloud.sci.exception.HolviException;
+import fi.elfcloud.sci.exception.ECClientException;
+import fi.elfcloud.sci.exception.ECException;
 
 /**
  * Model for {@link ClusterTree} containing {@link DataItemNode}s and {@link ClusterNode} as elements.
@@ -33,7 +49,7 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 	private ClusterNode homeNode;
 	private BeaverGUI gui;
 
-	public ClusterHierarchyModel(ClusterNode treenode, BeaverGUI gui) {
+	public ClusterHierarchyModel(ClusterNode treenode, BeaverGUI gui) throws ECException, IOException {
 		super(treenode);
 		homeNode = treenode;
 		this.gui = gui;
@@ -65,35 +81,27 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 		DataItem[] dataitems = null;
 		try {
 			HashMap<String, Object[]> elements = node.getElement().getElements();
-			clusters = (Cluster[]) elements.get("clusters");
-			dataitems = (DataItem[]) elements.get("dataitems");
-		} catch (HolviException e) {
+			clusters = (Cluster[]) elements.get("clusters"); //$NON-NLS-1$
+			dataitems = (DataItem[]) elements.get("dataitems"); //$NON-NLS-1$
+			for (Cluster cluster: clusters) {
+				node.add(new ClusterNode(cluster));
+			}
+			for (DataItem dataitem: dataitems) {
+				dataitem.setParentId(node.getElement().getId());
+				node.add(new DataItemNode(dataitem));
+			}
+		} catch (ECException e) {
 			gui.handleException(e);
 		}	
-
-		for (Cluster cluster: clusters) {
-			node.add(new ClusterNode(cluster));
-		}
-		for (DataItem dataitem: dataitems) {
-			dataitem.setParentId(node.getElement().getId());
-			node.add(new DataItemNode(dataitem));
-		}
 		nodeStructureChanged(node);
 	}
 
-	public void populateRoot() {
+	public void populateRoot() throws ECException, IOException {
 		nodeStructureChanged(homeNode);
 		homeNode.removeAllChildren();
-		try {
-			for (Vault vault: gui.getVaults()) {
-				ClusterNode node = new ClusterNode(vault);
-				homeNode.add(node);
-			}
-
-		} catch (HolviException e) {
-			gui.handleException(e);
-		} catch (IOException e) {
-			gui.handleException(e);
+		for (Vault vault: gui.getVaults()) {
+			ClusterNode node = new ClusterNode(vault);
+			homeNode.add(node);
 		}
 		nodeStructureChanged(homeNode);
 	}
@@ -102,17 +110,17 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 	public void removeSelected(TreePath[] paths) {
 		if (paths.length == 1) {
 			ClusterTreeNode node = (ClusterTreeNode)paths[0].getLastPathComponent();
-			String dialogTitle = "Remove vault";
+			String dialogTitle = Messages.getString("ClusterHierarchyModel.title_vault_remove_dialog"); //$NON-NLS-1$
 
 			if (node instanceof DataItemNode) {
-				dialogTitle = "Remove dataitem";
+				dialogTitle = Messages.getString("ClusterHierarchyModel.title_dataitem_remove_dialog"); //$NON-NLS-1$
 			} else if (node.getParentId() > 0) {
-				dialogTitle = "Remove cluster";
+				dialogTitle = Messages.getString("ClusterHierarchyModel.title_cluster_remove_dialog"); //$NON-NLS-1$
 			}
 
 			int n = JOptionPane.showConfirmDialog(
 					null,
-					"Are you sure you want to remove " + node.getName() + "?",
+					Messages.getString("ClusterHierarchyModel.dialog_remove_question") + node.getName() + "?", //$NON-NLS-1$ //$NON-NLS-2$
 					dialogTitle,
 					JOptionPane.YES_NO_OPTION);
 			switch (n) {
@@ -124,8 +132,8 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 		} else if (paths.length > 1){
 			int n = JOptionPane.showConfirmDialog(
 					null,
-					"Are you sure you want to remove selected items?",
-					"Remove " + Integer.toString(paths.length) + " items",
+					Messages.getString("ClusterHierarchyModel.dialog_remove_multiple_items_question"), //$NON-NLS-1$
+					Messages.getString("ClusterHierarchyModel.dialog_remove_multiple_items_title_1") + Integer.toString(paths.length) + Messages.getString("ClusterHierarchyModel.dialog_remove_multiple_items_title_2"), //$NON-NLS-1$ //$NON-NLS-2$
 					JOptionPane.YES_NO_OPTION);
 			switch (n) {
 			case JOptionPane.YES_OPTION:
@@ -146,7 +154,7 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 						node.remove();
 						removeNodeFromParent(node);
 					}
-				} catch (HolviException e) {
+				} catch (ECException e) {
 					gui.handleException(e);
 				} catch (JSONException e) {
 					e.printStackTrace();
@@ -157,18 +165,27 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 		worker.start();
 	}
 
-	public void downloadPaths(TreePath[] paths, final File destDirectory) {
+	public void downloadPaths(TreePath[] paths, final File destination) {
 		ClusterTreeNode node;
-		destDirectory.mkdir();
 		DownloadDialog dialog = new DownloadDialog();
-		for (int i = 0; i < paths.length; i++) {
-			node = (ClusterTreeNode)paths[i].getLastPathComponent();
+		if (paths.length == 1) {
+			node = (ClusterTreeNode)paths[0].getLastPathComponent();
 			if (node instanceof DataItemNode) {
-				File destination = new File(destDirectory, node.getName());
 				dialog.addFile((DataItem)node.getElement(), destination);
 			} else if (node instanceof ClusterNode) {
-				File destination = new File(destDirectory, node.getName());
-				dialog.addFile((Cluster)node.getElement(), destination);
+				File clusterFolder = new File(destination.getPath(), node.getName());
+				dialog.addFile((Cluster)node.getElement(), clusterFolder);
+			}
+		} else {
+			for (int i = 0; i < paths.length; i++) {
+				node = (ClusterTreeNode)paths[i].getLastPathComponent();
+				if (node instanceof DataItemNode) {
+					File f = new File(destination, node.getName());
+					dialog.addFile((DataItem)node.getElement(), f);
+				} else if (node instanceof ClusterNode) {
+					File f = new File(destination, node.getName());
+					dialog.addFile((Cluster)node.getElement(), f);
+				}
 			}
 		}
 		dialog.pack();
@@ -201,7 +218,7 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 		}
 	}
 
-	public void home() {
+	public void home() throws ECException, IOException {
 		this.homeNode.removeAllChildren();
 		populateRoot();
 		setRoot(this.homeNode);
@@ -248,8 +265,8 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 	public void relocateDataItems(Cluster destination, TreePath[] paths) {
 		try {
 			HashMap<String, Object[]> elements = destination.getElements();
-			DataItem[] dataitems = (DataItem[]) elements.get("dataitems");
-			Cluster[] clusters = (Cluster[]) elements.get("clusters");
+			DataItem[] dataitems = (DataItem[]) elements.get("dataitems"); //$NON-NLS-1$
+			Cluster[] clusters = (Cluster[]) elements.get("clusters"); //$NON-NLS-1$
 			for (TreePath path : paths) {
 				ClusterTreeNode node = (ClusterTreeNode) path.getLastPathComponent();
 				
@@ -274,7 +291,7 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 						relocateDataItem(di, destination.getId(), name);
 					}
 			} 
-		} catch (HolviException e1) {
+		} catch (ECException e1) {
 			e1.printStackTrace();
 		} catch (IOException e1) {
 			e1.printStackTrace();
@@ -284,9 +301,9 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 	private void relocateDataItem(DataItem di, int clusterId, String name) {
 		try {
 			di.relocate(clusterId, name);
-		} catch (HolviClientException e) {
+		} catch (ECClientException e) {
 			gui.handleException(e);
-		} catch (HolviException e) {
+		} catch (ECException e) {
 			if (e.getId() == 404) {
 				name = renameDataItem(name);
 				if (name != null) {
@@ -301,9 +318,9 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 	private String renameDataItem(String name) {
 		name = (String)JOptionPane.showInputDialog(
 				null,
-				"Data item or cluster with given name already exists\n" +
-						"Input new name for " + name,
-						"Rename data item",
+				Messages.getString("ClusterHierarchyModel.dialog_rename_dataitem_text_1") + //$NON-NLS-1$
+						Messages.getString("ClusterHierarchyModel.dialog_rename_dataitem_text_2") + name, //$NON-NLS-1$
+						Messages.getString("ClusterHierarchyModel.dialog_rename_dataitem_title"), //$NON-NLS-1$
 						JOptionPane.QUESTION_MESSAGE,
 						null,
 						null,
@@ -323,7 +340,7 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 		}
 	}
 
-	public void refresh() throws IOException {
+	public void refresh() throws IOException, ECException {
 		ClusterNode node = (ClusterNode) getRoot();
 		if (node == homeNode) {
 			populateRoot();
@@ -332,7 +349,7 @@ public class ClusterHierarchyModel extends DefaultTreeModel {
 		}
 	}
 
-	public void refresh(ClusterNode node) throws IOException {
+	public void refresh(ClusterNode node) throws IOException, ECException {
 		if (node == getRoot()) {
 			refresh();
 		}

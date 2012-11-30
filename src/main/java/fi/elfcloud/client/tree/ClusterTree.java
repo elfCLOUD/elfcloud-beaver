@@ -1,3 +1,19 @@
+/*
+ * Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ *	
+ *		Licensed under the Apache License, Version 2.0 (the "License");
+ *		you may not use this file except in compliance with the License.
+ *		You may obtain a copy of the License at
+ *	
+ *			http://www.apache.org/licenses/LICENSE-2.0
+ *	
+ *	   	Unless required by applicable law or agreed to in writing, software
+ *	   	distributed under the License is distributed on an "AS IS" BASIS,
+ *	   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	   	See the License for the specific language governing permissions and
+ *	   	limitations under the License.
+ */
+
 package fi.elfcloud.client.tree;
 
 import java.awt.BorderLayout;
@@ -30,6 +46,7 @@ import fi.elfcloud.client.BeaverGUI;
 import fi.elfcloud.client.DropHandler;
 import fi.elfcloud.client.dialog.DownloadDialog;
 import fi.elfcloud.sci.DataItem;
+import fi.elfcloud.sci.container.Cluster;
 
 /**
  * View for {@link ClusterHierarchyModel}. <p>
@@ -105,7 +122,8 @@ public class ClusterTree extends JTree implements MouseListener, DropTargetListe
 					try {
 						model.setRoot(node);
 						model.loadChildren((ClusterNode)node);
-						gui.updateTitle(node.toString());
+						Cluster c = (Cluster)node.getElement();
+						gui.updateTitle(c.getName());
 						gui.allowUpload(node != model.getHomeNode());
 					} catch (IOException exc) {
 					}

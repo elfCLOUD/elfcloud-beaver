@@ -47,9 +47,9 @@ public class SpringUtilities {
      * minimum, preferred, and maximum sizes.
      */
     public static void printSizes(Component c) {
-        System.out.println("minimumSize = " + c.getMinimumSize());
-        System.out.println("preferredSize = " + c.getPreferredSize());
-        System.out.println("maximumSize = " + c.getMaximumSize());
+        System.out.println("minimumSize = " + c.getMinimumSize()); //$NON-NLS-1$
+        System.out.println("preferredSize = " + c.getPreferredSize()); //$NON-NLS-1$
+        System.out.println("maximumSize = " + c.getMaximumSize()); //$NON-NLS-1$
     }
 
     /**
@@ -74,7 +74,7 @@ public class SpringUtilities {
         try {
             layout = (SpringLayout)parent.getLayout();
         } catch (ClassCastException exc) {
-            System.err.println("The first argument to makeGrid must use SpringLayout.");
+            System.err.println("The first argument to makeGrid must use SpringLayout."); //$NON-NLS-1$
             return;
         }
 
@@ -177,7 +177,7 @@ public class SpringUtilities {
         try {
             layout = (SpringLayout)parent.getLayout();
         } catch (ClassCastException exc) {
-            System.err.println("The first argument to makeCompactGrid must use SpringLayout.");
+            System.err.println("The first argument to makeCompactGrid must use SpringLayout."); //$NON-NLS-1$
             return;
         }
 

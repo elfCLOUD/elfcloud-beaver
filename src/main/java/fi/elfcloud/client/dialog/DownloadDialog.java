@@ -1,3 +1,19 @@
+/*
+ * Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ *	
+ *		Licensed under the Apache License, Version 2.0 (the "License");
+ *		you may not use this file except in compliance with the License.
+ *		You may obtain a copy of the License at
+ *	
+ *			http://www.apache.org/licenses/LICENSE-2.0
+ *	
+ *	   	Unless required by applicable law or agreed to in writing, software
+ *	   	distributed under the License is distributed on an "AS IS" BASIS,
+ *	   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	   	See the License for the specific language governing permissions and
+ *	   	limitations under the License.
+ */
+
 package fi.elfcloud.client.dialog;
 
 import java.awt.Desktop;
@@ -5,7 +21,7 @@ import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
-import java.awt.event.WindowStateListener;
+import java.awt.event.WindowListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.io.File;
@@ -21,12 +37,11 @@ import java.util.List;
 import javax.swing.JOptionPane;
 import javax.swing.SwingWorker;
 
-
-
+import fi.elfcloud.client.Messages;
 import fi.elfcloud.sci.DataItem;
 import fi.elfcloud.sci.container.Cluster;
-import fi.elfcloud.sci.exception.HolviEncryptionException;
-import fi.elfcloud.sci.exception.HolviException;
+import fi.elfcloud.sci.exception.ECEncryptionException;
+import fi.elfcloud.sci.exception.ECException;
 
 /**
  * 
@@ -35,7 +50,7 @@ import fi.elfcloud.sci.exception.HolviException;
 public class DownloadDialog extends TransferFrame implements ActionListener, PropertyChangeListener {
 	private static final long serialVersionUID = -7919455375814441902L;
 	private DownloadTask task;
-	private final Object[] options = {"Replace all", "Replace", "Skip", "Skip all"};
+	private final Object[] options = {Messages.getString("DownloadDialog.button_replace_all"), Messages.getString("DownloadDialog.button_replace"), Messages.getString("DownloadDialog.button_skip"), Messages.getString("DownloadDialog.button_skip_all")}; //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 
 	/**
 	 * 
@@ -47,23 +62,23 @@ public class DownloadDialog extends TransferFrame implements ActionListener, Pro
 		long maxSize = 0;
 		long read = 0;
 		boolean openFileOnComplete = false;
-		boolean autoClose = true;
-		int filesSent = 1;
+		int filesSent = 0;
 		@Override
 		protected Void doInBackground() throws Exception {
 			setProgress(0);
 			boolean allowReplace = false;
 			boolean askReplace = true;
 			for (int i=0; i<fileArray.size(); i++) {
+				filesSent++;
 				if (task.isCancelled()) {
 					break;
 				}
-				taskOutput.append("Downloading " + dataItemArray.get(i).getName() + " (" + i + "/" + fileArray.size() +") ...");
+				taskOutput.append(Messages.getString("DownloadDialog.task_downloading") + dataItemArray.get(i).getName() + " (" + filesSent + "/" + fileArray.size() +") ... "); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 				if (askReplace) {
 					if (fileArray.get(i).exists()) {
 						allowReplace = false;
 						int result = JOptionPane.showOptionDialog(DownloadDialog.this, 
-								"File " + fileArray.get(i).getPath() + " already exists, how to proceed?", "Replace " + fileArray.get(i).getPath() + "?", 
+								Messages.getString("DownloadDialog.error_file_exists_text_1") + fileArray.get(i).getPath() + Messages.getString("DownloadDialog.error_file_exists_text_2"), Messages.getString("DownloadDialog.error_file_exists_title") + fileArray.get(i).getPath() + "?",  //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 								JOptionPane.YES_NO_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[2]);
 						switch (result) {
 						case 0:
@@ -87,17 +102,19 @@ public class DownloadDialog extends TransferFrame implements ActionListener, Pro
 				}
 				if (!fileArray.get(i).exists() || allowReplace) {
 					if (saveFile(fileArray.get(i), dataItemArray.get(i))) {
-						taskOutput.append("OK\n");
+						taskOutput.append(Messages.getString("DownloadDialog.task_ok")); //$NON-NLS-1$
 					} else {
 						autoClose = false;
-						taskOutput.append("FAILED\n");
+						taskOutput.append(Messages.getString("DownloadDialog.task_failed")); //$NON-NLS-1$
+						if (stopOnError) {
+							task.cancel(true);
+						}
 					}
 				} else {
 					read += dataItemArray.get(i).getKeyLength();
 					setProgress((int) ((read / (double)maxSize)*100));
-					taskOutput.append("SKIPPED\n");
+					taskOutput.append(Messages.getString("DownloadDialog.task_skipped")); //$NON-NLS-1$
 				}
-				filesSent++;
 				int endPosition = taskOutput.getDocument().getLength();
 				Rectangle bottom = taskOutput.modelToView(endPosition);
 				bottom.width = 0;
@@ -111,9 +128,9 @@ public class DownloadDialog extends TransferFrame implements ActionListener, Pro
 						desktop.open(fileArray.get(0).getAbsoluteFile());
 					} catch (IOException e1) {
 						JOptionPane.showMessageDialog(DownloadDialog.this, 
-								"Could not open the file\n" + 
+								Messages.getString("DownloadDialog.auto_open_failed_text_1") +  //$NON-NLS-1$
 										fileArray.get(0).getAbsolutePath() + 
-								"\nTry opening it manually");
+								Messages.getString("DownloadDialog.auto_open_failed_text_2")); //$NON-NLS-1$
 					}
 				}
 			}
@@ -126,13 +143,16 @@ public class DownloadDialog extends TransferFrame implements ActionListener, Pro
 			byte[] buff = new byte[20971520];
 			int len = 0;
 			int inbuff = 0;
-			if (file.exists() && file.isDirectory()) {
-				taskOutput.append("Destination name was directory, file skipped ");
-				return false;
-			}
-
 			try {
 				bis = dataItem.getData();
+				File parentFolder = file.getParentFile();
+				parentFolder.mkdirs();
+				if (file.exists() && file.isDirectory()) {
+					read += dataItem.getKeyLength();
+					setProgress((int)(((double)read/(double)maxSize)*100.0));
+					taskOutput.append(Messages.getString("DownloadDialog.destination_directory_skip")); //$NON-NLS-1$
+					return false;
+				}
 				fo = new FileOutputStream(file);
 				while((len = bis.read(buff, 0, 20971520)) != -1) {
 					if (task.isCancelled()) { 
@@ -140,8 +160,7 @@ public class DownloadDialog extends TransferFrame implements ActionListener, Pro
 					}
 					inbuff = len;
 					read += inbuff;
-					int value = (int)(((double)read/(double)maxSize)*100.0);
-					setProgress(value);
+					setProgress((int)(((double)read/(double)maxSize)*100.0));
 					while ((inbuff < 20971520)) {
 						len = bis.read(buff, inbuff, 20971520-inbuff);
 						if (len == -1) {
@@ -149,29 +168,39 @@ public class DownloadDialog extends TransferFrame implements ActionListener, Pro
 						}
 						inbuff += len;
 						read += len;
-
 						setProgress((int)(((double)read/(double)maxSize)*100.0));
 					}
 					fo.write(buff, 0, inbuff);
 
 				}
 			} catch (InvalidKeyException e) {
+				read += dataItem.getKeyLength();
+				setProgress((int)(((double)read/(double)maxSize)*100.0));
 				autoClose = false;
-				taskOutput.append(" FAILED");
 				e.printStackTrace();
 				new IllegalKeyDialog();
 				return false;
-			} catch (HolviException e) {
+			} catch (ECException e) {
+				read += dataItem.getKeyLength();
+				setProgress((int)(((double)read/(double)maxSize)*100.0));
+				taskOutput.append("[" + e.getMessage() + "] "); //$NON-NLS-1$ //$NON-NLS-2$
 				return false;
-			} catch (HolviEncryptionException e) {
+			} catch (ECEncryptionException e) {
+				read += dataItem.getKeyLength();
+				setProgress((int)(((double)read/(double)maxSize)*100.0));
+				taskOutput.append("[" + e.getMessage() + "] "); //$NON-NLS-1$ //$NON-NLS-2$
 				if (e.getId() == 0) {
 					openFileOnComplete = false;
-					JOptionPane.showMessageDialog(DownloadDialog.this, e.getMessage());
 				}
 				return false;
 			} catch (FileNotFoundException e) {
+				read += dataItem.getKeyLength();
+				taskOutput.append("[" + e.getMessage() + "] "); //$NON-NLS-1$ //$NON-NLS-2$
+				setProgress((int)(((double)read/(double)maxSize)*100.0));
 				return false;
 			} catch (IOException e) {
+				read += dataItem.getKeyLength();
+				setProgress((int)(((double)read/(double)maxSize)*100.0));
 				return false;
 			} finally {
 				if (fo != null) {
@@ -195,13 +224,14 @@ public class DownloadDialog extends TransferFrame implements ActionListener, Pro
 
 		@Override
 		public void done() {
+			setTitle(Messages.getString("DownloadDialog.window_title_complete")); //$NON-NLS-1$
 			if (!task.isCancelled()) {
-				taskOutput.append("\nDone!");
+				taskOutput.append(Messages.getString("DownloadDialog.task_status_done")); //$NON-NLS-1$
 			}
 			if (autoClose) {
 				dispose();
 			}
-			cancel.setText("Close");
+			cancel.setText(Messages.getString("DownloadDialog.button_close")); //$NON-NLS-1$
 			cancel.removeActionListener(DownloadDialog.this);
 			cancel.addActionListener(new ActionListener() {
 				
@@ -225,28 +255,27 @@ public class DownloadDialog extends TransferFrame implements ActionListener, Pro
 		private void processCluster(Cluster cluster, File destination) {
 			try {
 				HashMap <String, Object[]> elements = cluster.getElements();
-				DataItem[] dataitems = (DataItem[]) elements.get("dataitems");
-				destination.mkdirs();
+				DataItem[] dataitems = (DataItem[]) elements.get("dataitems"); //$NON-NLS-1$
 				for (DataItem di : dataitems) {
 					fileArray.add(new File(destination.getAbsolutePath(), di.getName()));
 					dataItemArray.add(di);
 					maxSize += di.getKeyLength();
 				}
-				Cluster[] clusters = (Cluster[]) elements.get("clusters");
+				Cluster[] clusters = (Cluster[]) elements.get("clusters"); //$NON-NLS-1$
 				for (Cluster c : clusters) {
 					if (task.isCancelled()) {
 						break;
 					}
-					File clusterdestination = new File(destination.getAbsolutePath(), c.getName());
-					clusterdestination.mkdir();
-					processCluster(c, clusterdestination);
+					File clusterFolder = new File(destination.getAbsolutePath(), c.getName());
+					processCluster(c, clusterFolder);
 				}
-			} catch (HolviException e) {
+			} catch (ECException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
+		
 		public void addFile(Cluster cluster, File destination) {
 			processCluster(cluster, destination);
 		}
@@ -254,37 +283,55 @@ public class DownloadDialog extends TransferFrame implements ActionListener, Pro
 
 	@Override
 	public void propertyChange(PropertyChangeEvent evt) {
-		if ("progress" == evt.getPropertyName()) {
+		if ("progress" == evt.getPropertyName()) { //$NON-NLS-1$
 			int progress = (Integer) evt.getNewValue();
 			progressBar.setValue(progress);
-			setTitle("Downloading file " + task.filesSent + " of " + task.fileArray.size() + " - " + Integer.toString(progress) + "%");
+			setTitle(Messages.getString("DownloadDialog.window_title_downloading") + task.filesSent + Messages.getString("DownloadDialog.window_title_downloading_2") + task.fileArray.size() + " - " + Integer.toString(progress) + "%"); //$NON-NLS-1$ //$NON-NLS-2$ //$NON-NLS-3$ //$NON-NLS-4$
 		} 		
 	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
 		if (e.getActionCommand().equals(TransferFrame.CANCEL_ACTION)) {
-			task.autoClose = false;
+			autoClose = false;
 			task.cancel(true);
-			taskOutput.append("\nCancelled!");
+			taskOutput.append(Messages.getString("DownloadDialog.download_status_cancelled")); //$NON-NLS-1$
 		}
 	}
 
 	public DownloadDialog() {
-		setTitle("Download in progress...");
+		setTitle(Messages.getString("DownloadDialog.window_title_init")); //$NON-NLS-1$
 		task = new DownloadTask();
 		task.addPropertyChangeListener(this);
 		cancel.addActionListener(this);
-		addWindowStateListener(new WindowStateListener() {
+		addWindowListener(new WindowListener() {
 			@Override
-			public void windowStateChanged(WindowEvent e) {
-				switch (e.getID()) {
-				case WindowEvent.WINDOW_CLOSING:
-					task.cancel(true);
-					break;
-				default:
-					break;
-				}
+			public void windowActivated(WindowEvent arg0) {
+			}
+
+			@Override
+			public void windowClosed(WindowEvent arg0) {
+			}
+
+			@Override
+			public void windowClosing(WindowEvent arg0) {
+				task.cancel(true);				
+			}
+
+			@Override
+			public void windowDeactivated(WindowEvent arg0) {
+			}
+
+			@Override
+			public void windowDeiconified(WindowEvent arg0) {
+			}
+
+			@Override
+			public void windowIconified(WindowEvent arg0) {
+			}
+
+			@Override
+			public void windowOpened(WindowEvent arg0) {
 			}
 		});
 	}

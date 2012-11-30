@@ -4,8 +4,8 @@
   <groupId>fi.elfcloud</groupId>
   <artifactId>Beaver</artifactId>
   <packaging>jar</packaging>
-  <version>r3</version>
-  <name>elfCLOUD.fi Beaver</name>
+  <version>r5</version>
+  <name>elfcloud.fi Beaver</name>
   <url>http://maven.apache.org</url>
   <dependencies>
     <dependency>
@@ -17,11 +17,16 @@
         <groupId>com.apple</groupId>
         <artifactId>AppleJavaExtensions</artifactId>
         <scope>compile</scope>
-	<version>1.4</version>
-</dependency>
+		<version>1.4</version>
+	</dependency>
+	<dependency>
+		<groupId>org.apache.commons</groupId>
+		<artifactId>commons-lang3</artifactId>
+		<version>3.1</version>
+	</dependency>
   </dependencies>
   <build>
-  <finalName>elfCLOUD.fi Beaver</finalName>
+  <finalName>elfcloud.fi Beaver</finalName>
   <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -36,7 +41,7 @@
             </goals>
             <configuration>
               <includes>**/*.class</includes>
-              <excludes>**/*.properties</excludes>
+			  <excludes>**/*.properties</excludes>
               <outputDirectory>${project.build.directory}/classes</outputDirectory>
               <overWriteReleases>false</overWriteReleases>
               <overWriteSnapshots>false</overWriteSnapshots>
@@ -73,7 +78,7 @@
         <version>1.0-alpha-1</version>
         <configuration>
             <mainClass>fi.elfcloud.client.BeaverGUI</mainClass>
-            <bundleName>elfCLOUD.fi Beaver</bundleName>
+            <bundleName>elfcloud.fi Beaver</bundleName>
             <iconFile>${basedir}/src/main/resources/icons/beaver.icns</iconFile>
             <javaApplicationStub>${basedir}/src/main/resources/JavaApplicationStub</javaApplicationStub>
         </configuration>
@@ -92,6 +97,13 @@
           <targetPath>fi/elfcloud/client</targetPath>
           <directory>src/main/resources</directory>
       </resource>
+	  <resource>
+		<targetPath>fi/elfcloud/client</targetPath>
+		<directory>src/main/java/fi/elfcloud/client</directory>
+		<includes>
+			<include>**/*.properties</include>
+		</includes>
+	  </resource>
   </resources>
   </build>
 </project>

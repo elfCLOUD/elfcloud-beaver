@@ -1,3 +1,19 @@
+/*
+ * Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ *	
+ *		Licensed under the Apache License, Version 2.0 (the "License");
+ *		you may not use this file except in compliance with the License.
+ *		You may obtain a copy of the License at
+ *	
+ *			http://www.apache.org/licenses/LICENSE-2.0
+ *	
+ *	   	Unless required by applicable law or agreed to in writing, software
+ *	   	distributed under the License is distributed on an "AS IS" BASIS,
+ *	   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	   	See the License for the specific language governing permissions and
+ *	   	limitations under the License.
+ */
+
 package fi.elfcloud.sci.container;
 
 import java.io.IOException;
@@ -8,13 +24,13 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-
 import fi.elfcloud.sci.DataItem;
-import fi.elfcloud.sci.HolviClient;
-import fi.elfcloud.sci.exception.HolviException;
+import fi.elfcloud.sci.Client;
+import fi.elfcloud.sci.User;
+import fi.elfcloud.sci.exception.ECException;
 
 /**
- * Model for elfCLOUD.fi server cluster objects.<p>
+ * Model for elfcloud.fi server cluster objects.<p>
  * Provides methods for structuring data.
  *
  */
@@ -23,7 +39,7 @@ public class Cluster {
 	protected int id;
 	protected int childCount;
 	protected int dataItemCount;
-	protected HolviClient client;
+	protected Client client;
 	protected int parent_id = 0;
 	protected String last_accessed_date;
 	protected String last_modified_date;
@@ -33,16 +49,16 @@ public class Cluster {
 
 	}
 	
-	public Cluster(HolviClient client) {
+	public Cluster(Client client) {
 		this.client = client;
 	}
 	
-	public Cluster(HolviClient client, int id) {
+	public Cluster(Client client, int id) {
 		this.client = client;
 		this.id = id;
 	}
 	
-	public Cluster(HolviClient client, JSONObject object) throws JSONException {
+	public Cluster(Client client, JSONObject object) throws JSONException {
 		this.client = client;
 		this.id = object.getInt("id");
 		this.name = object.getString("name");
@@ -129,10 +145,10 @@ public class Cluster {
 	/**
 	 * Returns child {@link DataItem}s and {@link Cluster}s
 	 * @return {@link HashMap} with keys <code>clusters</code> and <code>dataitems</code>
-	 * @throws HolviException
+	 * @throws ECException
 	 * @throws IOException
 	 */
-	public HashMap<String, Object[]> getElements() throws HolviException, IOException {
+	public HashMap<String, Object[]> getElements() throws ECException, IOException {
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put("parent_id", this.id);
 		JSONObject response;
@@ -167,10 +183,10 @@ public class Cluster {
 	/**
 	 * Returns child {@link Cluster}s 
 	 * @return child {@link Cluster}s
-	 * @throws HolviException
+	 * @throws ECException
 	 * @throws IOException
 	 */
-	public Cluster[] getChildren() throws HolviException, IOException {
+	public Cluster[] getChildren() throws ECException, IOException {
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put("parent_id", this.id);
 		Object response;
@@ -195,10 +211,10 @@ public class Cluster {
 	 * @param 	keynames array of {@link DataItem} names. Can be empty Array to list all.
 	 * @return {@link DataItem}s filtered by <code>keynames</code> or all direct {@link DataItem}s if
 	 * 		array is empty
-	 * @throws HolviException
+	 * @throws ECException
 	 * @throws IOException
 	 */
-	public DataItem[] getDataItems(String[] keynames) throws HolviException, IOException {
+	public DataItem[] getDataItems(String[] keynames) throws ECException, IOException {
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put("parent_id", this.id);
 		params.put("names", keynames);
@@ -220,11 +236,11 @@ public class Cluster {
 	
 	/**
 	 * Performs {@link Cluster} remove operation.
-	 * @throws HolviException
+	 * @throws ECException
 	 * @throws JSONException
 	 * @throws IOException
 	 */
-	public void remove() throws HolviException, JSONException, IOException {
+	public void remove() throws ECException, JSONException, IOException {
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put("cluster_id", this.id);
 		this.client.getConnection().sendRequest("remove_cluster", params);
@@ -241,15 +257,19 @@ public class Cluster {
 	/**
 	 * Sets new name to {@link Cluster}
 	 * @param newName new name for the {@link Cluster}
-	 * @throws HolviException
+	 * @throws ECException
 	 * @throws JSONException
 	 * @throws IOException
 	 */
-	public void rename(String newName) throws HolviException, JSONException, IOException {
+	public void rename(String newName) throws ECException, JSONException, IOException {
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put("cluster_id", this.id);
 		params.put("name", newName);
 		this.client.getConnection().sendRequest("rename_cluster", params);
 		this.name = newName;
+	}
+	
+	public User getOwner() {
+		return null;
 	}
 }

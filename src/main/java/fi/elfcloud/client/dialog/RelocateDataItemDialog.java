@@ -1,3 +1,19 @@
+/*
+ * Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ *	
+ *		Licensed under the Apache License, Version 2.0 (the "License");
+ *		you may not use this file except in compliance with the License.
+ *		You may obtain a copy of the License at
+ *	
+ *			http://www.apache.org/licenses/LICENSE-2.0
+ *	
+ *	   	Unless required by applicable law or agreed to in writing, software
+ *	   	distributed under the License is distributed on an "AS IS" BASIS,
+ *	   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	   	See the License for the specific language governing permissions and
+ *	   	limitations under the License.
+ */
+
 package fi.elfcloud.client.dialog;
 
 import java.awt.BorderLayout;
@@ -17,23 +33,25 @@ import javax.swing.event.TreeExpansionListener;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeModel;
+
 import fi.elfcloud.client.BeaverGUI;
+import fi.elfcloud.client.Messages;
 import fi.elfcloud.client.tree.ClusterNode;
 import fi.elfcloud.sci.container.Cluster;
-import fi.elfcloud.sci.exception.HolviException;
+import fi.elfcloud.sci.exception.ECException;
 
 public class RelocateDataItemDialog extends JDialog implements TreeExpansionListener {
 	private static final long serialVersionUID = -8210635235934493067L;
 	private BeaverGUI gui;
 	private TreeModel model;
-	private static final ImageIcon folderIcon = new ImageIcon(BeaverGUI.class.getResource("icons/folder.png"));
+	private static final ImageIcon folderIcon = new ImageIcon(BeaverGUI.class.getResource("icons/folder.png")); //$NON-NLS-1$
 	private boolean move = false;
 	private ClusterNode selectedNode = null;
 	private JTree tree;
 	
 	public RelocateDataItemDialog(BeaverGUI gui, Cluster cluster) {
 		setModal(true);
-		setTitle("Select destination location");
+		setTitle(Messages.getString("RelocateDataItemDialog.window_title")); //$NON-NLS-1$
 		ClusterNode rootNode = new ClusterNode(cluster);
 		
 		this.gui = gui;
@@ -51,7 +69,7 @@ public class RelocateDataItemDialog extends JDialog implements TreeExpansionList
 		tree.setCellRenderer(renderer);
 		JScrollPane treeView = new JScrollPane(tree);
 		add(treeView, BorderLayout.CENTER);
-		JButton button = new JButton("Select");
+		JButton button = new JButton(Messages.getString("RelocateDataItemDialog.button_select")); //$NON-NLS-1$
 		button.addActionListener(new ActionListener() {
 			
 			@Override
@@ -61,7 +79,7 @@ public class RelocateDataItemDialog extends JDialog implements TreeExpansionList
 				move = true;
 				dispose();
 				} catch (NullPointerException exc) {
-					JOptionPane.showMessageDialog(RelocateDataItemDialog.this, "Please select the destination first.", "Invalid selection", JOptionPane.INFORMATION_MESSAGE);
+					JOptionPane.showMessageDialog(RelocateDataItemDialog.this, Messages.getString("RelocateDataItemDialog.error_invalid_selection"), Messages.getString("RelocateDataItemDialog.error_invalid_selection_title"), JOptionPane.INFORMATION_MESSAGE); //$NON-NLS-1$ //$NON-NLS-2$
 				}
 			}
 		});
@@ -94,7 +112,7 @@ public class RelocateDataItemDialog extends JDialog implements TreeExpansionList
 				ClusterNode newNode = new ClusterNode(c);
 				((DefaultTreeModel) model).insertNodeInto(newNode, root, root.getChildCount());
 			}
-		} catch (HolviException e) {
+		} catch (ECException e) {
 			gui.handleException(e);
 		} catch (IOException e) {
 			gui.handleException(e);
@@ -113,7 +131,7 @@ public class RelocateDataItemDialog extends JDialog implements TreeExpansionList
 				ClusterNode newNode = new ClusterNode(c);
 				node.insert(newNode, node.getChildCount());
 			}
-		} catch (HolviException e) {
+		} catch (ECException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();

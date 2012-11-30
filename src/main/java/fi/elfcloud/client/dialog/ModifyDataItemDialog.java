@@ -1,3 +1,19 @@
+/*
+ * Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ *	
+ *		Licensed under the Apache License, Version 2.0 (the "License");
+ *		you may not use this file except in compliance with the License.
+ *		You may obtain a copy of the License at
+ *	
+ *			http://www.apache.org/licenses/LICENSE-2.0
+ *	
+ *	   	Unless required by applicable law or agreed to in writing, software
+ *	   	distributed under the License is distributed on an "AS IS" BASIS,
+ *	   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	   	See the License for the specific language governing permissions and
+ *	   	limitations under the License.
+ */
+
 package fi.elfcloud.client.dialog;
 
 import java.awt.BorderLayout;
@@ -23,10 +39,13 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 
+import org.apache.commons.lang3.StringEscapeUtils;
+
 import fi.elfcloud.client.BeaverGUI;
+import fi.elfcloud.client.Messages;
 import fi.elfcloud.client.WrapLayout;
 
-public class ModifyDataItemDialog extends HolviDialog {
+public class ModifyDataItemDialog extends BeaverDialog {
 	private static final long serialVersionUID = -8065189591501016726L;
 	private JTextField name;
 	private JLabel lblName;
@@ -36,14 +55,14 @@ public class ModifyDataItemDialog extends HolviDialog {
 	private JLabel lblTags;
 	private JPanel checkboxPanel;
 	private JScrollPane scrollPane;
-	private URL imageURL = BeaverGUI.class.getResource("icons/error_16x16.png");
+	private URL imageURL = BeaverGUI.class.getResource("icons/error_16x16.png"); //$NON-NLS-1$
 	private Vector<String> tagVector;
 	private HashMap<String, String> metamap;
 	private boolean answer = false;
 	
 	public ModifyDataItemDialog(JFrame parent, HashMap<String, String> metaMap, String diName) {
 		super(parent, true);
-		setTitle("Modify " + diName);
+		setTitle(Messages.getString("ModifyDataItemDialog.window_title") + diName); //$NON-NLS-1$
 		this.metamap = metaMap;
 		tagVector = new Vector<String>();
 		setLocationRelativeTo(parent);
@@ -51,7 +70,7 @@ public class ModifyDataItemDialog extends HolviDialog {
 		GridBagConstraints cs = new GridBagConstraints();
 		cs.insets = new Insets(0, 0, 5, 0);
 
-		lblName = new JLabel("Name: ");
+		lblName = new JLabel(Messages.getString("ModifyDataItemDialog.label_name")); //$NON-NLS-1$
 		cs.gridx = 0;
 		cs.gridy = 0;
 		cs.fill = GridBagConstraints.HORIZONTAL;
@@ -68,7 +87,7 @@ public class ModifyDataItemDialog extends HolviDialog {
 		name.setText(diName);
 		panel.add(name, cs);
 
-		lblDescription = new JLabel("Description: ");
+		lblDescription = new JLabel(Messages.getString("ModifyDataItemDialog.label_description")); //$NON-NLS-1$
 		cs.gridx = 0;
 		cs.gridy = 1;
 		cs.gridwidth = 1;
@@ -82,10 +101,10 @@ public class ModifyDataItemDialog extends HolviDialog {
 		cs.gridwidth = 2;
 		cs.fill = GridBagConstraints.HORIZONTAL;
 		cs.weightx = 1.0;
-		description.setText(metaMap.get("DSC"));
+		description.setText(metaMap.get("DSC")); //$NON-NLS-1$
 		panel.add(description, cs);
 
-		lblTags = new JLabel("Tags: ");
+		lblTags = new JLabel(Messages.getString("ModifyDataItemDialog.label_tags")); //$NON-NLS-1$
 		cs.gridx = 0;
 		cs.gridy = 2;
 		cs.gridwidth = 1;
@@ -100,7 +119,7 @@ public class ModifyDataItemDialog extends HolviDialog {
 		cs.weightx = 1.0;
 		panel.add(tags, cs);
 
-		JButton addButton = new JButton("Add");
+		JButton addButton = new JButton(Messages.getString("ModifyDataItemDialog.button_add_tag")); //$NON-NLS-1$
 		cs.gridx = GridBagConstraints.RELATIVE;
 		cs.gridy = 2;
 		cs.gridwidth = 1;
@@ -109,10 +128,10 @@ public class ModifyDataItemDialog extends HolviDialog {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				String tagText = tags.getText().trim();
-				if (!tagText.equals("")) {
+				if (!tagText.equals("")) { //$NON-NLS-1$
 					addTags(tagText);
 				}
-				tags.setText("");
+				tags.setText(""); //$NON-NLS-1$
 				
 				checkboxPanel.revalidate();
 				checkboxPanel.repaint();
@@ -123,7 +142,7 @@ public class ModifyDataItemDialog extends HolviDialog {
 		checkboxPanel = new JPanel(new WrapLayout(FlowLayout.LEFT));
 		checkboxPanel.setSize(new Dimension(320, 1));
 		try {
-			addTags(metamap.get("TGS"));
+			addTags(metamap.get("TGS")); //$NON-NLS-1$
 		} catch (NullPointerException e) {
 			// No existing tags
 		}
@@ -136,7 +155,7 @@ public class ModifyDataItemDialog extends HolviDialog {
 		getContentPane().add(scrollPane, BorderLayout.CENTER);
 		
 		
-		JButton generateButton = new JButton("Save");
+		JButton generateButton = new JButton(Messages.getString("ModifyDataItemDialog.button_save")); //$NON-NLS-1$
 		generateButton.addActionListener(new ActionListener() {
 
 			@Override
@@ -148,7 +167,7 @@ public class ModifyDataItemDialog extends HolviDialog {
 				setVisible(false);
 			}
 		});
-		JButton cancelButton = new JButton("Cancel");
+		JButton cancelButton = new JButton(Messages.getString("ModifyDataItemDialog.button_cancel")); //$NON-NLS-1$
 		cancelButton.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent arg0) {
@@ -166,19 +185,19 @@ public class ModifyDataItemDialog extends HolviDialog {
 	}
 	
 	private void addTags(String tag) {
-		String[] tagArray = tag.split(",");
+		String[] tagArray = tag.split(","); //$NON-NLS-1$
 		for (String str: tagArray) {
 			if (str.trim().length() == 0) {
 				continue;
 			}
-			final JCheckBox check = new JCheckBox(str.trim());
+			final HTMLEscapedJCheckBox check = new HTMLEscapedJCheckBox(str.trim());
 			check.setIcon(new ImageIcon(imageURL));
 			check.setSelectedIcon(new ImageIcon(imageURL));
 			check.addActionListener(new ActionListener() {
 				@Override
 				public void actionPerformed(ActionEvent e) {
 					checkboxPanel.remove(check);
-					tagVector.remove(check.getText());
+					tagVector.remove(check.getOriginalText());
 					checkboxPanel.revalidate();
 					checkboxPanel.repaint();
 				}
@@ -199,12 +218,12 @@ public class ModifyDataItemDialog extends HolviDialog {
 	public String getTags() {
 		StringBuilder sb = new StringBuilder();
 		for (String tag: tagVector) {
-			sb.append(tag.trim() + ",");
+			sb.append(tag.trim() + ","); //$NON-NLS-1$
 		}
 		String tagString = sb.toString();
 		
 		if (tagString.length() == 0) {
-			return "";
+			return ""; //$NON-NLS-1$
 		}
 		return tagString.substring(0, tagString.length()-1);
 	}
@@ -215,5 +234,24 @@ public class ModifyDataItemDialog extends HolviDialog {
 	
 	public String getName() {
 		return name.getText().trim();
+	}
+	
+	private class HTMLEscapedJCheckBox extends JCheckBox{
+		private static final long serialVersionUID = -8253789726580515609L;
+		private String originalText;
+		
+		public HTMLEscapedJCheckBox(String text) {
+			super(text);
+			originalText = text;
+		}
+		
+		@Override
+		public void setText(String text) {
+			super.setText("<html>"+StringEscapeUtils.escapeHtml3(text)+"</html>");
+		}
+
+		public String getOriginalText() {
+			return originalText;
+		}
 	}
 }

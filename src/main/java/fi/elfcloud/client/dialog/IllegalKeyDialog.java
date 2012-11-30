@@ -1,3 +1,19 @@
+/*
+ * Copyright 2010-2012 elfCLOUD / elfcloud.fi - SCIS Secure Cloud Infrastructure Services
+ *	
+ *		Licensed under the Apache License, Version 2.0 (the "License");
+ *		you may not use this file except in compliance with the License.
+ *		You may obtain a copy of the License at
+ *	
+ *			http://www.apache.org/licenses/LICENSE-2.0
+ *	
+ *	   	Unless required by applicable law or agreed to in writing, software
+ *	   	distributed under the License is distributed on an "AS IS" BASIS,
+ *	   	WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *	   	See the License for the specific language governing permissions and
+ *	   	limitations under the License.
+ */
+
 package fi.elfcloud.client.dialog;
 
 import java.awt.BorderLayout;
@@ -14,14 +30,16 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
+import fi.elfcloud.client.Messages;
+
 public class IllegalKeyDialog extends JDialog {
 	private static final long serialVersionUID = -8382022158097193355L;
 
 	public IllegalKeyDialog() {
 		JPanel textPanel = new JPanel(new BorderLayout());
-		textPanel.add(new JLabel("Using strong encryption ciphers (AES192 and AES256) requires installation of Java Cryptography Extension Unlimited Strength patch."), BorderLayout.PAGE_START);
-		JLabel label = new JLabel("Please follow Oracle Java instructions and download links at");
-		JLabel lblLink = new JLabel("<html><u>http://www.oracle.com/technetwork/java/javase/downloads/index.html</u><html>");
+		textPanel.add(new JLabel(Messages.getString("IllegalKeyDialog.0")), BorderLayout.PAGE_START); //$NON-NLS-1$
+		JLabel label = new JLabel(Messages.getString("IllegalKeyDialog.1")); //$NON-NLS-1$
+		JLabel lblLink = new JLabel(Messages.getString("IllegalKeyDialog.2")); //$NON-NLS-1$
 		lblLink.addMouseListener(new MouseListener() {
 			@Override
 			public void mouseReleased(MouseEvent arg0) {
@@ -45,7 +63,7 @@ public class IllegalKeyDialog extends JDialog {
 			public void mouseClicked(MouseEvent arg0) {
 				Desktop desktop = Desktop.getDesktop();
 				try {
-					desktop.browse(new URI("http://www.oracle.com/technetwork/java/javase/downloads/index.html"));
+					desktop.browse(new URI(Messages.getString("IllegalKeyDialog.3"))); //$NON-NLS-1$
 				} catch (IOException e) {
 					e.printStackTrace();
 				} catch (URISyntaxException e) {
@@ -55,7 +73,7 @@ public class IllegalKeyDialog extends JDialog {
 		});
 		textPanel.add(label, BorderLayout.WEST);
 		textPanel.add(lblLink, BorderLayout.EAST);
-		textPanel.add(new JLabel("AES128 can be used with the standard international Java runtime environment."), BorderLayout.SOUTH);
-		JOptionPane.showMessageDialog(this, textPanel, "Unsupported key strength", JOptionPane.INFORMATION_MESSAGE);
+		textPanel.add(new JLabel(Messages.getString("IllegalKeyDialog.4")), BorderLayout.SOUTH); //$NON-NLS-1$
+		JOptionPane.showMessageDialog(this, textPanel, Messages.getString("IllegalKeyDialog.window_title"), JOptionPane.INFORMATION_MESSAGE); //$NON-NLS-1$
 	}
 }
